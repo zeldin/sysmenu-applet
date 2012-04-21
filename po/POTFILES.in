@@ -1,0 +1,6 @@
+# List of source files containing translatable strings.
+# Please keep this file sorted alphabetically.
+#
+[encoding: UTF-8]
+sysmenu/sysmenu.c
+[type: gettext/ini]sysmenu/org.gnome.panel.applet.SysMenuApplet.panel-applet.in.in

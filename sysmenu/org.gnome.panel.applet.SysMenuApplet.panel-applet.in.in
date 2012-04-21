@@ -1,0 +1,10 @@
+[Applet Factory]
+Id=SysMenuAppletFactory
+Location=@LIBEXECDIR@/sysmenu_applet
+_Name=SysMenu Applet Factory
+_Description=SysMenu Applet Factory
+
+[SysMenuApplet]
+_Name=System Menu
+_Description=The good old System menu from Gnome 2 returns!
+Icon=gnome-computer
