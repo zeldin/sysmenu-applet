@@ -23,16 +23,562 @@
 #include <panel-applet.h>
 
 #include "menu.h"
+#include "launch.h"
+#include "util.h"
 #include "sysmenu.h"
+
+#define panel_key_file_get_string(key_file, key) \
+	 g_key_file_get_string (key_file, G_KEY_FILE_DESKTOP_GROUP, key, NULL)
+#define panel_key_file_get_locale_string(key_file, key) \
+	 g_key_file_get_locale_string(key_file, G_KEY_FILE_DESKTOP_GROUP, key, NULL, NULL)
+
+/* Keep in sync with the values defined in gnome-session/session.h */
+typedef enum {
+  PANEL_SESSION_MANAGER_LOGOUT_MODE_NORMAL = 0,
+  PANEL_SESSION_MANAGER_LOGOUT_MODE_NO_CONFIRMATION,
+  PANEL_SESSION_MANAGER_LOGOUT_MODE_FORCE
+} PanelSessionManagerLogoutType;
+
+typedef enum {
+  PANEL_ACTION_NONE = 0,
+  PANEL_ACTION_LOCK,
+  PANEL_ACTION_LOGOUT,
+  PANEL_ACTION_SHUTDOWN,
+} PanelActionButtonType;
+
+typedef struct {
+  PanelActionButtonType   type;
+  char                   *icon_name;
+  char                   *text;
+  char                   *tooltip;
+  void                  (*invoke)      (GtkWidget         *widget);
+} PanelAction;
+
+static void panel_action_lock_screen (GtkWidget *widget);
+static void panel_action_logout (GtkWidget *widget);
+static void panel_action_shutdown (GtkWidget *widget);
+
+static PanelAction actions [] = {
+  {
+    PANEL_ACTION_NONE,
+    NULL, NULL, NULL, NULL,
+  },
+  {
+    PANEL_ACTION_LOCK,
+    "system-lock-screen",
+    N_("Lock Screen"),
+    N_("Protect your computer from unauthorized use"),
+    panel_action_lock_screen,
+  },
+  {
+    PANEL_ACTION_LOGOUT,
+    "system-log-out",
+    /* when changing one of those two strings, don't forget to
+     * update the ones in panel-menu-items.c (look for
+     * "1" (msgctxt: "panel:showusername")) */
+    N_("Log Out..."),
+    N_("Log out of this session to log in as a different user"),
+    panel_action_logout,
+  },
+  {
+    PANEL_ACTION_SHUTDOWN,
+    "system-shutdown",
+    N_("Shut Down..."),
+    N_("Shut down the computer"),
+    panel_action_shutdown,
+  }
+};
+
+static GDBusProxy *
+panel_session_manager_get (void)
+{
+  static GDBusProxy *proxy;
+  GError   *error;
+
+  if (!proxy) {
+    error = NULL;
+    proxy = g_dbus_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
+					   G_DBUS_PROXY_FLAGS_NONE,
+					   NULL,
+					   "org.gnome.SessionManager",
+					   "/org/gnome/SessionManager",
+					   "org.gnome.SessionManager",
+					   NULL, &error);
+    if (error) {
+      g_warning ("Could not connect to session manager: %s",
+		 error->message);
+      g_error_free (error);
+      return;
+    }
+  }
+  return proxy;
+}
+
+static void
+panel_session_manager_request_logout (GDBusProxy *proxy,
+				      PanelSessionManagerLogoutType  mode)
+{
+  GVariant *ret;
+  GError   *error;
+
+  if (!proxy) {
+    g_warning ("Session manager service not available.");
+    return;
+  }
+
+  error = NULL;
+  ret = g_dbus_proxy_call_sync (proxy,
+				"Logout",
+				g_variant_new ("(u)", mode),
+				G_DBUS_CALL_FLAGS_NONE,
+				-1,
+				NULL,
+				&error);
+
+  if (ret)
+    g_variant_unref (ret);
+
+  if (error) {
+    g_warning ("Could not ask session manager to log out: %s",
+	       error->message);
+    g_error_free (error);
+  }
+}
+
+void
+panel_session_manager_request_shutdown (GDBusProxy *proxy)
+{
+  GVariant *ret;
+  GError   *error;
+
+  if (!proxy) {
+    g_warning ("Session manager service not available.");
+    return;
+  }
+
+  error = NULL;
+  ret = g_dbus_proxy_call_sync (proxy,
+				"Shutdown",
+				NULL,
+				G_DBUS_CALL_FLAGS_NONE,
+				-1,
+				NULL,
+				&error);
+
+  if (ret)
+    g_variant_unref (ret);
+
+  if (error) {
+    g_warning ("Could not ask session manager to shut down: %s",
+	       error->message);
+    g_error_free (error);
+  }
+}
+
+gboolean
+panel_session_manager_is_shutdown_available (GDBusProxy *proxy)
+{
+  GVariant *ret;
+  GError   *error;
+  gboolean  is_shutdown_available = FALSE;
+
+  if (!proxy) {
+    g_warning ("Session manager service not available.");
+    return FALSE;
+  }
+
+  error = NULL;
+  ret = g_dbus_proxy_call_sync (proxy,
+				"CanShutdown",
+				NULL,
+				G_DBUS_CALL_FLAGS_NONE,
+				-1,
+				NULL,
+				&error);
+
+  if (error) {
+    g_warning ("Could not ask session manager if shut down is available: %s",
+	       error->message);
+    g_error_free (error);
+
+    return FALSE;
+  } else {
+    g_variant_get (ret, "(b)", &is_shutdown_available);
+    g_variant_unref (ret);
+  }
+
+  return is_shutdown_available;
+}
+
+static void
+panel_action_lock_screen (GtkWidget *widget)
+{
+  static GDBusProxy *proxy;
+  GVariant *ret;
+  GError   *error;
+
+  if (!proxy) {
+    error = NULL;
+    proxy =
+      g_dbus_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
+				     G_DBUS_PROXY_FLAGS_NONE,
+				     NULL,
+				     "org.gnome.ScreenSaver",
+				     "/org/gnome/ScreenSaver",
+				     "org.gnome.ScreenSaver",
+				     NULL, &error);
+    if (error) {
+      g_warning ("Could not connect to screensaver: %s",
+		 error->message);
+      g_error_free (error);
+    }
+  }
+
+  if (!proxy) {
+    g_warning ("Screensaver service not available.");
+    return;
+  }
+
+  error = NULL;
+  ret = g_dbus_proxy_call_sync (proxy,
+				"Lock",
+				NULL,
+				G_DBUS_CALL_FLAGS_NONE,
+				-1,
+				NULL,
+				&error);
+
+  if (ret)
+    g_variant_unref (ret);
+
+  if (error) {
+    g_warning ("Could not ask screensaver to lock: %s",
+	       error->message);
+    g_error_free (error);
+  }
+}
+
+static void
+panel_action_logout (GtkWidget *widget)
+{
+  /* FIXME: we need to use widget to get the screen for the
+   * confirmation dialog, see
+   * http://bugzilla.gnome.org/show_bug.cgi?id=536914 */
+  panel_session_manager_request_logout (panel_session_manager_get (),
+					PANEL_SESSION_MANAGER_LOGOUT_MODE_NORMAL);
+}
+
+static void
+panel_action_shutdown (GtkWidget *widget)
+{
+  GDBusProxy *proxy;
+
+  proxy = panel_session_manager_get ();
+  panel_session_manager_request_shutdown (proxy);
+}
+
+static void
+panel_menu_item_activate_desktop_file (GtkWidget  *menuitem,
+				       const char *path)
+{
+  panel_launch_desktop_file (path, menuitem_to_screen (menuitem), NULL);
+}
+
+static GtkWidget *
+panel_menu_item_desktop_new (char      *path,
+			     char      *force_name,
+			     gboolean   use_icon)
+{
+  GKeyFile  *key_file;
+  gboolean   loaded;
+  GtkWidget *item;
+  char      *path_freeme;
+  char      *full_path;
+  char      *uri;
+  char      *type;
+  gboolean   is_application;
+  char      *tryexec;
+  char      *icon;
+  char      *name;
+  char      *comment;
+
+  path_freeme = NULL;
+
+  key_file = g_key_file_new ();
+
+  if (g_path_is_absolute (path)) {
+    loaded = g_key_file_load_from_file (key_file, path,
+					G_KEY_FILE_NONE, NULL);
+    full_path = path;
+  } else {
+    char *lookup_file;
+    char *desktop_path;
+
+    if (!g_str_has_suffix (path, ".desktop")) {
+      desktop_path = g_strconcat (path, ".desktop", NULL);
+    } else {
+      desktop_path = path;
+    }
+
+    lookup_file = g_strconcat ("applications", G_DIR_SEPARATOR_S,
+			       desktop_path, NULL);
+    loaded = g_key_file_load_from_data_dirs (key_file, lookup_file,
+					     &path_freeme,
+					     G_KEY_FILE_NONE,
+					     NULL);
+    full_path = path_freeme;
+    g_free (lookup_file);
+
+    if (desktop_path != path)
+      g_free (desktop_path);
+  }
+
+  if (!loaded) {
+    g_key_file_free (key_file);
+    if (path_freeme)
+      g_free (path_freeme);
+    return NULL;
+  }
+
+  /* For Application desktop files, respect TryExec */
+  type = panel_key_file_get_string (key_file, "Type");
+  if (!type) {
+    g_key_file_free (key_file);
+    if (path_freeme)
+      g_free (path_freeme);
+    return NULL;
+  }
+  is_application = (strcmp (type, "Application") == 0);
+  g_free (type);
+
+  if (is_application) {
+    tryexec = panel_key_file_get_string (key_file, "TryExec");
+    if (tryexec) {
+      char *prog;
+
+      prog = g_find_program_in_path (tryexec);
+      g_free (tryexec);
+
+      if (!prog) {
+	/* FIXME: we could add some file monitor magic,
+	 * so that the menu items appears when the
+	 * program appears, but that's really complex
+	 * for not a huge benefit */
+	g_key_file_free (key_file);
+	if (path_freeme)
+	  g_free (path_freeme);
+	return NULL;
+      }
+
+      g_free (prog);
+    }
+  }
+
+  /* Now, simply build the menu item */
+  icon    = panel_key_file_get_locale_string (key_file, "Icon");
+  comment = panel_key_file_get_locale_string (key_file, "Comment");
+
+  if (PANEL_GLIB_STR_EMPTY (force_name))
+    name = panel_key_file_get_locale_string (key_file, "Name");
+  else
+    name = g_strdup (force_name);
+
+  if (use_icon) {
+    item = panel_image_menu_item_new ();
+  } else {
+    item = gtk_image_menu_item_new ();
+  }
+
+  setup_menu_item_with_icon (item, panel_menu_icon_get_size (),
+			     icon, NULL, NULL, name);
+
+  panel_util_set_tooltip_text (item, comment);
+
+  g_signal_connect_data (item, "activate",
+			 G_CALLBACK (panel_menu_item_activate_desktop_file),
+			 g_strdup (full_path),
+			 (GClosureNotify) g_free, 0);
+  g_signal_connect (G_OBJECT (item), "button_press_event",
+		    G_CALLBACK (menu_dummy_button_press_event), NULL);
+
+  uri = g_filename_to_uri (full_path, NULL, NULL);
+
+#if 0
+  setup_uri_drag (item, uri, icon);
+#endif
+  g_free (uri);
+
+  g_key_file_free (key_file);
+
+  if (icon)
+    g_free (icon);
+
+  if (name)
+    g_free (name);
+
+  if (comment)
+    g_free (comment);
+
+  if (path_freeme)
+    g_free (path_freeme);
+
+  return item;
+}
+
+static GtkWidget *
+panel_menu_items_create_action_item (PanelActionButtonType action_type)
+{
+  GtkWidget *item;
+
+  item = gtk_image_menu_item_new ();
+  setup_menu_item_with_icon (item,
+			     panel_menu_icon_get_size (),
+			     actions[action_type].icon_name,
+			     NULL, NULL,
+			     actions[action_type].text);
+
+  panel_util_set_tooltip_text (item,
+			       actions[action_type].tooltip);
+
+  g_signal_connect (item, "activate",
+		    (GCallback)actions[action_type].invoke, NULL);
+  g_signal_connect (G_OBJECT (item), "button_press_event",
+		    G_CALLBACK (menu_dummy_button_press_event), NULL);
+#if 0
+  setup_internal_applet_drag (item, action_type);
+#endif
+
+  return item;
+}
+
+static void
+panel_menu_items_append_lock_logout (GtkWidget *menu)
+{
+  GList      *children;
+  GList      *last;
+  GtkWidget  *item;
+
+  children = gtk_container_get_children (GTK_CONTAINER (menu));
+  last = g_list_last (children);
+  if (last != NULL &&
+      GTK_IS_SEPARATOR (last->data))
+    item = GTK_WIDGET (last->data);
+  else
+    item = add_menu_separator (menu);
+  g_list_free (children);
+
+#if 0
+  panel_lockdown_on_notify (panel_lockdown_get (),
+			    NULL,
+			    G_OBJECT (item),
+			    panel_menu_items_lock_logout_separator_notified,
+			    item);
+  panel_menu_items_lock_logout_separator_notified (panel_lockdown_get (),
+						   item);
+#endif
+
+  item = panel_menu_items_create_action_item (PANEL_ACTION_LOCK);
+  if (item != NULL) {
+    gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
+#if 0
+    g_object_bind_property (panel_lockdown_get (),
+			    "disable-lock-screen",
+			    item,
+			    "visible",
+			    G_BINDING_SYNC_CREATE|G_BINDING_INVERT_BOOLEAN);
+#endif
+  }
+
+  item = panel_menu_items_create_action_item (PANEL_ACTION_LOGOUT);
+
+  if (item != NULL) {
+    gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
+#if 0
+    g_object_bind_property (panel_lockdown_get (),
+			    "disable-log-out",
+			    item,
+			    "visible",
+			    G_BINDING_SYNC_CREATE|G_BINDING_INVERT_BOOLEAN);
+#endif
+  }
+
+  /* FIXME: should be dynamic */
+  if (panel_session_manager_is_shutdown_available (panel_session_manager_get ())) {
+    item = panel_menu_items_create_action_item (PANEL_ACTION_SHUTDOWN);
+    if (item != NULL && !g_getenv("LTSP_CLIENT")) {
+      GtkWidget *sep;
+
+      sep = add_menu_separator (menu);
+
+      gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
+
+#if 0
+      g_object_bind_property (panel_lockdown_get (),
+			      "disable-log-out",
+			      sep,
+			      "visible",
+			      G_BINDING_SYNC_CREATE|G_BINDING_INVERT_BOOLEAN);
+      g_object_bind_property (panel_lockdown_get (),
+			      "disable-log-out",
+			      item,
+			      "visible",
+			      G_BINDING_SYNC_CREATE|G_BINDING_INVERT_BOOLEAN);
+#endif
+    }
+  }
+}
+
+static void
+sysmenu_append_menu (GtkWidget *menu,
+		     gpointer   data)
+{
+  SysMenuApplet *applet;
+  gboolean       add_separator;
+  GList         *children;
+  GList         *last;
+
+  applet = (SysMenuApplet *) data;
+
+  add_separator = FALSE;
+  children = gtk_container_get_children (GTK_CONTAINER (menu));
+  last = g_list_last (children);
+
+  if (last != NULL)
+    add_separator = !GTK_IS_SEPARATOR (GTK_WIDGET (last->data));
+
+  g_list_free (children);
+
+  if (add_separator)
+    add_menu_separator (menu);
+
+  GtkWidget *item;
+
+  item = panel_menu_item_desktop_new ("yelp.desktop", NULL, FALSE);
+  if (item)
+    gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
+
+  item = panel_menu_item_desktop_new ("gnome-about.desktop", NULL, FALSE);
+  if (item)
+    gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
+
+  panel_menu_items_append_lock_logout (menu);
+}
 
 static GtkWidget *
 sysmenu_create_menu (SysMenuApplet *sysmenu)
 {
   GtkWidget *menu;
 
-  menu = create_applications_menu ("gnomecc.menu", NULL, FALSE);
+  menu = create_applications_menu ("settings.menu", NULL, FALSE);
 
   g_object_set_data (G_OBJECT (menu), "menu_applet", sysmenu);
+
+  g_object_set_data (G_OBJECT (menu),
+		     "panel-menu-append-callback",
+		     sysmenu_append_menu);
+  g_object_set_data (G_OBJECT (menu),
+		     "panel-menu-append-callback-data",
+		     sysmenu);
 
   return menu;
 }

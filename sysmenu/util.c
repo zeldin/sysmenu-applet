@@ -8,8 +8,6 @@
 #define PANEL_GENERAL_SCHEMA                    "org.gnome.gnome-panel.general"
 #define PANEL_GENERAL_ENABLE_TOOLTIPS_KEY       "enable-tooltips"
 
-#define PANEL_GLIB_STR_EMPTY(x) ((x) == NULL || (x)[0] == '\0')
-
 static gboolean
 panel_util_query_tooltip_cb (GtkWidget  *widget,
 			     gint        x,

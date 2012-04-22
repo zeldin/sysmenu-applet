@@ -41,7 +41,7 @@ static GtkWidget *
 populate_menu_from_directory (GtkWidget          *menu,
 			      GMenuTreeDirectory *directory);
 
-static GtkIconSize
+GtkIconSize
 panel_menu_icon_get_size (void)
 {
   return gtk_icon_size_from_name("panel-menu");
@@ -590,7 +590,7 @@ load_icons_handler (gpointer data)
   return TRUE;
 }
 
-static gboolean
+gboolean
 menu_dummy_button_press_event (GtkWidget      *menuitem,
 			       GdkEventButton *event)
 {
@@ -896,7 +896,7 @@ create_empty_menu (void)
   return retval;
 }
 
-static GtkWidget *
+GtkWidget *
 add_menu_separator (GtkWidget *menu)
 {
   GtkWidget *menuitem;
@@ -1327,4 +1327,20 @@ create_applications_menu (const char *menu_file,
   g_object_unref (tree);
 
   return menu;
+}
+
+void
+setup_menu_item_with_icon (GtkWidget   *item,
+			   GtkIconSize  icon_size,
+			   const char  *icon_name,
+			   const char  *stock_id,
+			   GIcon       *gicon,
+			   const char  *title)
+{
+  if (icon_name || gicon || stock_id)
+    panel_load_menu_image_deferred (item, icon_size,
+				    stock_id, gicon,
+				    icon_name, NULL);
+
+  setup_menuitem (item, icon_size, NULL, title);
 }
