@@ -941,6 +941,18 @@ panel_image_menu_item_new (void)
   return menuitem;
 }
 
+static const char *
+select_submenu_fallback_icon (GMenuTreeDirectory *directory)
+{
+  const char *id = gmenu_tree_directory_get_menu_id(directory);
+  if (id != NULL)
+    if (!strcmp(id, "Administration"))
+      return "gnome-system";
+    else if (!strcmp(id, "Preferences"))
+      return "gnome-settings";
+  return "folder";
+}
+
 static GtkWidget *
 create_submenu_entry (GtkWidget          *menu,
 		      GMenuTreeDirectory *directory)
@@ -961,7 +973,7 @@ create_submenu_entry (GtkWidget          *menu,
 				  NULL,
 				  gmenu_tree_directory_get_icon (directory),
 				  NULL,
-				  "folder");
+				  select_submenu_fallback_icon (directory));
 
   setup_menuitem (menuitem,
 		  panel_menu_icon_get_size (),
