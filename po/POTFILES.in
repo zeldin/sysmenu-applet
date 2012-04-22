@@ -3,4 +3,5 @@
 #
 [encoding: UTF-8]
 sysmenu/sysmenu.c
+sysmenu/launch.c
 [type: gettext/ini]sysmenu/org.gnome.panel.applet.SysMenuApplet.panel-applet.in.in
