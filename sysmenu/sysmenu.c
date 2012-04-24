@@ -770,14 +770,7 @@ sysmenu_applet_factory (PanelApplet *applet,
 			const gchar *iid,
 			gpointer     data)
 {
-  static gboolean environment_setup = FALSE;
-
   gboolean retval = FALSE;
-
-  if (!environment_setup) {
-    setup_environment ();
-    environment_setup = TRUE;
-  }
 
   if (!strcmp (iid, "SysMenuApplet"))
     retval = sysmenu_applet_fill (applet);
@@ -789,7 +782,16 @@ sysmenu_applet_factory (PanelApplet *applet,
   return retval;
 }
 
+#define main factory_main
 PANEL_APPLET_OUT_PROCESS_FACTORY ("SysMenuAppletFactory",
 				  PANEL_TYPE_APPLET,
 				  sysmenu_applet_factory,
 				  NULL)
+#undef main
+
+int main (int argc, char *argv [])
+{
+  setup_environment ();
+  return factory_main (argc, argv);
+}
+
