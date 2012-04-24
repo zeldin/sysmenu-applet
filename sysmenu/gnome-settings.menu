@@ -40,8 +40,8 @@
   </Menu>     <!-- End System Settings -->
 
   <Layout>
-    <Menuname>Preferences</Menuname>
     <Menuname>Administration</Menuname>
+    <Menuname>Preferences</Menuname>
     <Merge type="menus"/>
     <Merge type="files"/>
   </Layout>
