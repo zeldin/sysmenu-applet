@@ -2,6 +2,7 @@ AM_CPPFLAGS =						\
 	-I.						\
 	-I$(srcdir) 					\
 	$(SYSMENU_APPLET_CFLAGS)			\
+	-DEXTRA_XDG_DATA_DIR=\""$(pkgdatadir)"\"	\
 	-DGMENU_I_KNOW_THIS_IS_UNSTABLE
 
 libexec_PROGRAMS = sysmenu_applet
@@ -41,9 +42,16 @@ org.gnome.panel.applet.SysMenuAppletFactory.service: $(service_in_files)
             -e "s|\@LIBEXECDIR\@|$(libexecdir)|" \
             $< > $@
 
+menusdir     = $(pkgdatadir)/menus
+menus_DATA   = gnome-preferences.menu gnome-settings.menu
+
+deskdirdir   = $(pkgdatadir)/desktop-directories
+deskdir_DATA = Preferences.directory System-Settings.directory
+
+
 CLEANFILES = $(applet_DATA) $(applet_DATA).in $(service_DATA)
 
 EXTRA_DIST = \
 	     org.gnome.panel.applet.SysMenuApplet.panel-applet.in.in	\
-             $(service_in_files)
+             $(service_in_files) $(menus_DATA) $(deskdir_DATA)
 

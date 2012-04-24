@@ -19,6 +19,7 @@
 #include <config.h>
 #include <stdlib.h>
 #include <glib/gi18n.h>
+#include <glib/gprintf.h>
 #include <gtk/gtk.h>
 #include <panel-applet.h>
 
@@ -643,7 +644,7 @@ sysmenu_create_menu (SysMenuApplet *sysmenu)
 {
   GtkWidget *menu;
 
-  menu = create_applications_menu ("settings.menu", NULL, FALSE);
+  menu = create_applications_menu ("gnome-settings.menu", NULL, FALSE);
 
   g_object_set_data (G_OBJECT (menu), "menu_applet", sysmenu);
 
@@ -735,12 +736,48 @@ sysmenu_applet_fill (PanelApplet *applet)
   return TRUE;
 }
 
+static void
+setenvf (const char *envname, const char *fmt, ...)
+{
+  va_list args;
+  gchar *buffer;
+  va_start (args, fmt);
+  g_vasprintf (&buffer, fmt, args);
+  va_end (args);
+  setenv (envname, buffer, TRUE);
+  g_free (buffer);
+}
+
+static void
+prepend_env_path (const char *envname, const char *path)
+{
+  const char *oldenv = getenv (envname);
+  if (oldenv == NULL || !*oldenv)
+    setenv (envname, path, TRUE);
+  else
+    setenvf (envname, "%s:%s", path, oldenv);
+}
+
+static void
+setup_environment (void)
+{
+  prepend_env_path ("XDG_CONFIG_DIRS", EXTRA_XDG_DATA_DIR);
+  prepend_env_path ("XDG_DATA_DIRS", EXTRA_XDG_DATA_DIR);
+}
+
 static gboolean
 sysmenu_applet_factory (PanelApplet *applet,
 			const gchar *iid,
 			gpointer     data)
 {
+  static gboolean environment_setup = FALSE;
+
   gboolean retval = FALSE;
+
+  if (!environment_setup) {
+    setup_environment ();
+    environment_setup = TRUE;
+  }
 
   if (!strcmp (iid, "SysMenuApplet"))
     retval = sysmenu_applet_fill (applet);
