@@ -749,20 +749,19 @@ setenvf (const char *envname, const char *fmt, ...)
 }
 
 static void
-prepend_env_path (const char *envname, const char *path)
+prepend_env_path (const char *envname, const char *path, const char *defpath)
 {
   const char *oldenv = getenv (envname);
   if (oldenv == NULL || !*oldenv)
-    setenv (envname, path, TRUE);
-  else
-    setenvf (envname, "%s:%s", path, oldenv);
+    oldenv = defpath;
+  setenvf (envname, "%s:%s", path, oldenv);
 }
 
 static void
 setup_environment (void)
 {
-  prepend_env_path ("XDG_CONFIG_DIRS", EXTRA_XDG_DATA_DIR);
-  prepend_env_path ("XDG_DATA_DIRS", EXTRA_XDG_DATA_DIR);
+  prepend_env_path ("XDG_CONFIG_DIRS", EXTRA_XDG_DATA_DIR, "/etc/xdg");
+  prepend_env_path ("XDG_DATA_DIRS", EXTRA_XDG_DATA_DIR, "/usr/local/share/:/usr/share/");
 }
 
 static gboolean
