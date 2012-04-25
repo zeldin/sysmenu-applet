@@ -52,6 +52,7 @@ typedef struct {
   char                   *icon_name;
   char                   *text;
   char                   *tooltip;
+  char                   *drag_id;
   void                  (*invoke)      (GtkWidget         *widget);
 } PanelAction;
 
@@ -62,13 +63,14 @@ static void panel_action_shutdown (GtkWidget *widget);
 static PanelAction actions [] = {
   {
     PANEL_ACTION_NONE,
-    NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL,
   },
   {
     PANEL_ACTION_LOCK,
     "system-lock-screen",
     N_("Lock Screen"),
     N_("Protect your computer from unauthorized use"),
+    "ACTION:lock:NEW",
     panel_action_lock_screen,
   },
   {
@@ -79,6 +81,7 @@ static PanelAction actions [] = {
      * "1" (msgctxt: "panel:showusername")) */
     N_("Log Out..."),
     N_("Log out of this session to log in as a different user"),
+    "ACTION:logout:NEW",
     panel_action_logout,
   },
   {
@@ -86,6 +89,7 @@ static PanelAction actions [] = {
     "system-shutdown",
     N_("Shut Down..."),
     N_("Shut down the computer"),
+    "ACTION:shutdown:NEW",
     panel_action_shutdown,
   }
 };
@@ -404,9 +408,7 @@ panel_menu_item_desktop_new (char      *path,
 
   uri = g_filename_to_uri (full_path, NULL, NULL);
 
-#if 0
   setup_uri_drag (item, uri, icon);
-#endif
   g_free (uri);
 
   g_key_file_free (key_file);
@@ -445,9 +447,8 @@ panel_menu_items_create_action_item (PanelActionButtonType action_type)
 		    (GCallback)actions[action_type].invoke, NULL);
   g_signal_connect (G_OBJECT (item), "button_press_event",
 		    G_CALLBACK (menu_dummy_button_press_event), NULL);
-#if 0
-  setup_internal_applet_drag (item, action_type);
-#endif
+  setup_internal_applet_drag (item, actions[action_type].icon_name,
+			      actions[action_type].drag_id);
 
   return item;
 }

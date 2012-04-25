@@ -724,6 +724,82 @@ drag_data_get_menu_cb (GtkWidget        *widget,
 }
 
 static void
+drag_data_get_string_cb (GtkWidget *widget, GdkDragContext     *context,
+			 GtkSelectionData   *selection_data, guint info,
+			 guint time, const char *string)
+{
+  gtk_selection_data_set (selection_data,
+			  gtk_selection_data_get_target (selection_data), 8, (guchar *)string,
+			  strlen(string));
+}
+
+void
+setup_uri_drag (GtkWidget  *menuitem,
+		const char *uri,
+		const char *icon)
+{
+  static GtkTargetEntry menu_item_targets[] = {
+    { "text/uri-list", 0, 0 }
+  };
+
+#if 0
+  if (panel_lockdown_get_panels_locked_down_s ())
+    return;
+#endif
+
+  gtk_drag_source_set (menuitem,
+		       GDK_BUTTON1_MASK|GDK_BUTTON2_MASK,
+		       menu_item_targets, 1,
+		       GDK_ACTION_COPY);
+
+  if (icon != NULL)
+    gtk_drag_source_set_icon_name (menuitem, icon);
+
+  g_signal_connect (G_OBJECT (menuitem), "drag_begin",
+		    G_CALLBACK (drag_begin_menu_cb), NULL);
+  g_signal_connect_data (G_OBJECT (menuitem), "drag_data_get",
+			 G_CALLBACK (drag_data_get_string_cb),
+			 g_strdup (uri),
+			 (GClosureNotify)g_free,
+			 0 /* connect_flags */);
+  g_signal_connect (G_OBJECT (menuitem), "drag_end",
+		    G_CALLBACK (drag_end_menu_cb), NULL);
+}
+
+void
+setup_internal_applet_drag (GtkWidget  *menuitem,
+			    const char *icon_name,
+			    const char *drag_id)
+{
+  static GtkTargetEntry menu_item_targets[] = {
+    { "application/x-panel-applet-internal", 0, 0 }
+  };
+
+#if 0
+  if (panel_lockdown_get_panels_locked_down_s ())
+    return;
+#endif
+
+  gtk_drag_source_set (menuitem,
+		       GDK_BUTTON1_MASK|GDK_BUTTON2_MASK,
+		       menu_item_targets, 1,
+		       GDK_ACTION_COPY);
+
+  if (icon_name  != NULL)
+    gtk_drag_source_set_icon_name (menuitem, icon_name);
+
+  g_signal_connect (G_OBJECT (menuitem), "drag_begin",
+		    G_CALLBACK (drag_begin_menu_cb), NULL);
+  g_signal_connect_data (G_OBJECT (menuitem), "drag_data_get",
+			 G_CALLBACK (drag_data_get_string_cb),
+			 g_strdup (drag_id),
+			 (GClosureNotify)g_free,
+			 0 /* connect_flags */);
+  g_signal_connect (G_OBJECT (menuitem), "drag_end",
+		    G_CALLBACK (drag_end_menu_cb), NULL);
+}
+
+static void
 submenu_to_display (GtkWidget *menu)
 {
   GMenuTree           *tree;

@@ -25,3 +25,11 @@ setup_menu_item_with_icon (GtkWidget   *item,
 			   const char  *stock_id,
 			   GIcon       *gicon,
 			   const char  *title);
+extern void
+setup_uri_drag (GtkWidget  *menuitem,
+		const char *uri,
+		const char *icon);
+extern void
+setup_internal_applet_drag (GtkWidget  *menuitem,
+			    const char *icon_name,
+			    const char *drag_id);
