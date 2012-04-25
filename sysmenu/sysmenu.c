@@ -1,5 +1,7 @@
 /* sysmenu.c - A Gnome2-workalike system menu
+ *
  * Copyright (C) 2012 Marcus Comstedt
+ * Copyright (C) 2005 Vincent Untz
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +16,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * Authors:
+ *      Marcus Comstedt <marcus@mc.pp.se>
+ *
+ * Based on code from panel-menu-items.c in gnome-panel:
+ *
+ * Authors:
+ *      Vincent Untz <vincent@vuntz.net>
+ *
+ * Based on code from panel-menu-bar.c
  */
 
 #include <config.h>
