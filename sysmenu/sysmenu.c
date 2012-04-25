@@ -431,7 +431,7 @@ panel_menu_items_create_action_item (PanelActionButtonType action_type)
 {
   GtkWidget *item;
 
-  item = gtk_image_menu_item_new ();
+  item = panel_image_menu_item_new ();
   setup_menu_item_with_icon (item,
 			     panel_menu_icon_get_size (),
 			     actions[action_type].icon_name,
@@ -628,11 +628,11 @@ sysmenu_append_menu (GtkWidget *menu,
 
   GtkWidget *item;
 
-  item = panel_menu_item_desktop_new ("yelp.desktop", NULL, FALSE);
+  item = panel_menu_item_desktop_new ("yelp.desktop", NULL, TRUE);
   if (item)
     gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
 
-  item = panel_menu_item_desktop_new ("gnome-about.desktop", NULL, FALSE);
+  item = panel_menu_item_desktop_new ("gnome-about.desktop", NULL, TRUE);
   if (item)
     gtk_menu_shell_append (GTK_MENU_SHELL (menu), item);
 
@@ -644,7 +644,7 @@ sysmenu_create_menu (SysMenuApplet *sysmenu)
 {
   GtkWidget *menu;
 
-  menu = create_applications_menu ("gnome-settings.menu", NULL, FALSE);
+  menu = create_applications_menu ("gnome-settings.menu", NULL, TRUE);
 
   g_object_set_data (G_OBJECT (menu), "menu_applet", sysmenu);
 
