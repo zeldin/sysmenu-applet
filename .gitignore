@@ -8,6 +8,7 @@ autom4te.cache/
 *.panel-applet.in
 *.service
 /aclocal.m4
+/ChangeLog
 /config.guess
 /config.h
 /config.h.in
@@ -16,6 +17,7 @@ autom4te.cache/
 /config.sub
 /configure
 /depcomp
+/INSTALL
 /install-sh
 /libtool
 /ltmain.sh
