@@ -66,7 +66,16 @@ populate_menu_from_directory (GtkWidget          *menu,
 GtkIconSize
 panel_menu_icon_get_size (void)
 {
-  return gtk_icon_size_from_name("panel-menu");
+  static GtkIconSize panel_menu_icon_size = 0;
+  if (!panel_menu_icon_size) {
+    panel_menu_icon_size = gtk_icon_size_from_name("panel-menu");
+    if (!panel_menu_icon_size)
+      panel_menu_icon_size =
+	gtk_icon_size_register ("panel-menu",
+				PANEL_DEFAULT_MENU_ICON_SIZE,
+				PANEL_DEFAULT_MENU_ICON_SIZE);
+  }
+  return panel_menu_icon_size;
 }
 
 static void
