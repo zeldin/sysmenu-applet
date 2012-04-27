@@ -4,11 +4,45 @@ sysmenu-applet
 Do you feel that the new "User" menu in Gnome 3 wasn't really
 an improvement?  Do you think that the "Classic" desktop should
 be a little more Classic, and actually keep the "System" menu
-which was there "clasically" instead?  Then this applet is for you.
+which was there "classically" instead?  Then this applet is for you.
 
 This is an applet to be used with the gnome-panel of Gnome 3 (as
 seen in the "Classic Gnome" session).  It simply emulates the
 System menu of Gnome 2, allowing you to place it right next to the
 "Custom menu" applet which provides "Applications" and "Places",
 thus recreating the style of Gnome 2.
+
+
+Notes on installation
+=====================
+
+If you compile with a different prefix than /usr (for example the
+default prefix of /usr/local), then you need to be aware that there
+are two parts of the applet which must be locatable by the system
+for the applet to work.  These are the applet description, and the
+DBus service description.
+
+Starting with the DBus service description, this is installed in
+${prefix}/share/dbus-1/services/.  DBus follows the XDG rules
+for where to look for data files, so it _will_ find the file
+if you use prefix /usr/local (or /usr), but for more exotic
+locations, you'll have to either modify  your $XDG_DATA_DIRS to
+include your ${prefix}/share, or create a symlink from either
+/usr/share/dbus-1/services/ or /usr/local/share/dbus-1/services/.
+
+The gnome-panel, on the other hand, does not respect XDG defaults
+or overrides when looking for applet description files.  It will
+only look in /usr/share/gnome-panel/4.0/applets/ (assuming it was
+compiled with prefix /usr itself), or directories listed in 
+$GNOME_PANEL_APPLETS_DIR, if that is set.  Again, you have the choice
+of making a symlink from /usr/share/gnome-panel/4.0/applets/, or
+to modify $GNOME_PANEL_APPLETS_DIR to include your
+${prefix}/share/gnome-panel/4.0/applets/.
+
+If you chose to modify an environment variable in order to make
+gnome-panel/DBus find the files, keep in mind that the variable
+must be set in a context where gnome-panel/DBus will see the updated
+variable.  If you login using gdm, you can use the file ~/.xprofile
+to set any variables in such a way that any part of the X session
+can see them.
 
