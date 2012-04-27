@@ -1,0 +1,20 @@
+Source: sysmenu-applet
+Section: gnome
+Priority: optional
+Maintainer: Marcus Comstedt <marcus@mc.pp.se>
+Build-Depends: debhelper (>= 7.0.50),
+               autotools-dev,
+               intltool (>= 0.40),
+               libpanel-applet-4-dev (>= 2.91.90),
+               libgnome-menu-3-dev (>= 3.1.4),
+               libgtk-3-dev (>= 3.1.4)
+Standards-Version: 3.9.1
+Vcs-Git: git://github.com/zeldin/sysmenu-applet.git
+Homepage: https://github.com/zeldin/sysmenu-applet
+
+Package: sysmenu-applet
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: System Menu applet
+ The System Menu applet recreates the System Menu which used to exist
+ in the Gnome 2 panel.  Use this if you don't like the new User menu.

@@ -16,6 +16,10 @@ autom4te.cache/
 /config.status
 /config.sub
 /configure
+/debian/*.log
+/debian/*.substvars
+/debian/files
+/debian/sysmenu-applet/
 /depcomp
 /INSTALL
 /install-sh
